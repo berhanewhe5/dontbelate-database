@@ -152,7 +152,8 @@ function loadGrades(){
     });
     const input = document.createElement('input'); input.placeholder = "New grade"; input.id='newGradeInput';
     dropdown.appendChild(input);
-    const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; addBtn.onclick = addNewGrade;
+    const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; 
+    addBtn.onclick = (e) => addNewGrade(e); // << FIX 1: Pass event
     dropdown.appendChild(addBtn);
   }, err => console.error('Grades load error', err));
 }
@@ -171,7 +172,8 @@ function loadChapters(){
     });
     const input = document.createElement('input'); input.placeholder='New chapter'; input.id='newChapterInput';
     dropdown.appendChild(input);
-    const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; addBtn.onclick = addNewChapter;
+    const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; 
+    addBtn.onclick = (e) => addNewChapter(e); // << FIX 1: Pass event
     dropdown.appendChild(addBtn);
   }, err => console.error('Chapters load error', err));
 }
@@ -191,7 +193,8 @@ function loadTopics(){
       });
       const input = document.createElement('input'); input.placeholder='New topic'; input.id='newTopicInput';
       dropdown.appendChild(input);
-      const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; addBtn.onclick = addNewTopic;
+      const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; 
+      addBtn.onclick = (e) => addNewTopic(e); // << FIX 1: Pass event
       dropdown.appendChild(addBtn);
   }, err => console.error('Topics load error', err));
 }
@@ -212,16 +215,48 @@ function loadQuestionTypes(){
       });
       const input = document.createElement('input'); input.placeholder='New type'; input.id='newQuestionTypeInput';
       dropdown.appendChild(input);
-      const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; addBtn.onclick = addNewQuestionType;
+      const addBtn = document.createElement('a'); addBtn.textContent = '+ Add'; 
+      addBtn.onclick = (e) => addNewQuestionType(e); // << FIX 1: Pass event
       dropdown.appendChild(addBtn);
   }, err => console.error('QuestionTypes load error', err));
 }
 
-// ====== add new items ======
-function addNewGrade(){ const val=document.getElementById('newGradeInput').value?.trim(); if(!val) return showNotification('Grade empty','error'); db.collection('Grades').doc(val).set({createdAt:Date.now()}); document.getElementById('newGradeInput').value=''; showNotification('Grade added'); }
-function addNewChapter(){ if(!selected.grade) return showNotification('Select grade first','error'); const val=document.getElementById('newChapterInput').value?.trim(); if(!val) return showNotification('Chapter empty','error'); db.collection('Grades').doc(selected.grade).collection('Chapters').doc(val).set({createdAt:Date.now()}); document.getElementById('newChapterInput').value=''; showNotification('Chapter added'); }
-function addNewTopic(){ if(!selected.grade || !selected.chapter) return showNotification('Select grade & chapter','error'); const val=document.getElementById('newTopicInput').value?.trim(); if(!val) return showNotification('Topic empty','error'); db.collection('Grades').doc(selected.grade).collection('Chapters').doc(selected.chapter).collection('Topics').doc(val).set({createdAt:Date.now()}); document.getElementById('newTopicInput').value=''; showNotification('Topic added'); }
-function addNewQuestionType(){ if(!selected.grade || !selected.chapter || !selected.topic) return showNotification('Select grade/chapter/topic','error'); const val=document.getElementById('newQuestionTypeInput').value?.trim(); if(!val) return showNotification('Type empty','error'); db.collection('Grades').doc(selected.grade).collection('Chapters').doc(selected.chapter).collection('Topics').doc(selected.topic).collection('QuestionTypes').doc(val).set({createdAt:Date.now()}); document.getElementById('newQuestionTypeInput').value=''; showNotification('Question type added'); }
+// ====== add new items (FIXED to stop dropdown from closing) ======
+function addNewGrade(e){ 
+  if(e) e.stopPropagation(); // << FIX 2: Stop propagation
+  const val=document.getElementById('newGradeInput').value?.trim(); 
+  if(!val) return showNotification('Grade empty','error'); 
+  db.collection('Grades').doc(val).set({createdAt:Date.now()}); 
+  document.getElementById('newGradeInput').value=''; 
+  showNotification('Grade added'); 
+}
+function addNewChapter(e){ 
+  if(e) e.stopPropagation(); // << FIX 2: Stop propagation
+  if(!selected.grade) return showNotification('Select grade first','error'); 
+  const val=document.getElementById('newChapterInput').value?.trim(); 
+  if(!val) return showNotification('Chapter empty','error'); 
+  db.collection('Grades').doc(selected.grade).collection('Chapters').doc(val).set({createdAt:Date.now()}); 
+  document.getElementById('newChapterInput').value=''; 
+  showNotification('Chapter added'); 
+}
+function addNewTopic(e){ 
+  if(e) e.stopPropagation(); // << FIX 2: Stop propagation
+  if(!selected.grade || !selected.chapter) return showNotification('Select grade & chapter','error'); 
+  const val=document.getElementById('newTopicInput').value?.trim(); 
+  if(!val) return showNotification('Topic empty','error'); 
+  db.collection('Grades').doc(selected.grade).collection('Chapters').doc(selected.chapter).collection('Topics').doc(val).set({createdAt:Date.now()}); 
+  document.getElementById('newTopicInput').value=''; 
+  showNotification('Topic added'); 
+}
+function addNewQuestionType(e){ 
+  if(e) e.stopPropagation(); // << FIX 2: Stop propagation
+  if(!selected.grade || !selected.chapter || !selected.topic) return showNotification('Select grade/chapter/topic','error'); 
+  const val=document.getElementById('newQuestionTypeInput').value?.trim(); 
+  if(!val) return showNotification('Type empty','error'); 
+  db.collection('Grades').doc(selected.grade).collection('Chapters').doc(selected.chapter).collection('Topics').doc(selected.topic).collection('QuestionTypes').doc(val).set({createdAt:Date.now()}); 
+  document.getElementById('newQuestionTypeInput').value=''; 
+  showNotification('Question type added'); 
+}
 
 // ====== load questions (REAL-TIME LISTENER) ======
 let questionsUnsubscribe = null;

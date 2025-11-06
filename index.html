@@ -1,374 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Don't Be Late! Question Uploader</title>
-  <!-- Firebase App (the core Firebase SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 
-  <!-- Firestore -->
+  <!-- CSS: make sure this file is named exactly styles.css -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Firebase (must load before app.js) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div class="container">
+    <h1>Don't Be Late! Question Uploader</h1>
 
-<h1>Don't Be Late! Questions Database</h1>
+    <div class="dropdown-selectors">
+      <div class="dropdown">
+        <button class="dropbtn" id="gradeBtn" onclick="toggleDropdown('gradeDropdown')">Grade ▼</button>
+        <div id="gradeDropdown" class="dropdown-content"></div>
+      </div>
 
-<!-- Dropdown Selectors -->
-<section class="dropdown-selectors">
-  <div class="dropdown">
-    <button onclick="toggleDropdown('gradeDropdown')" class="dropbtn">Grade</button>
-    <div id="gradeDropdown" class="dropdown-content">
-      <input type="text" placeholder="New Grade" id="newGradeInput">
-      <a onclick="addNewGrade()">+ Add</a>
+      <div class="dropdown">
+        <button class="dropbtn disabled" id="chapterBtn" onclick="toggleDropdown('chapterDropdown')">Chapter ▼</button>
+        <div id="chapterDropdown" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button class="dropbtn disabled" id="topicBtn" onclick="toggleDropdown('topicDropdown')">Topic ▼</button>
+        <div id="topicDropdown" class="dropdown-content"></div>
+      </div>
+
+      <div class="dropdown">
+        <button class="dropbtn disabled" id="questionTypeBtn" onclick="toggleDropdown('questionTypeDropdown')">Question Type ▼</button>
+        <div id="questionTypeDropdown" class="dropdown-content"></div>
+      </div>
     </div>
+
+    <section id="current-selection">
+      <strong>Currently Selected:</strong>
+      <span id="current-grade">Grade: None</span> |
+      <span id="current-chapter">Chapter: None</span> |
+      <span id="current-topic">Topic: None</span> |
+      <span id="current-questionType">Type: None</span>
+    </section>
+
+    <div class="content">
+      <form id="question-form">
+        <input type="text" name="question" placeholder="Enter question..." required />
+        <input type="text" name="answer" placeholder="Enter answer..." required />
+        <button type="submit" id="submitBtn" disabled>Add Question</button>
+      </form>
+
+      <div id="question-preview">
+        <h2>Preview</h2>
+        <div class="preview-body">
+          <div><strong>Q:</strong> <span id="preview-question"></span></div>
+          <div class="preview-answer"><strong>A:</strong> <span id="preview-answer"></span></div>
+        </div>
+      </div>
+
+      <ul id="question-list"></ul>
+    </div>
+
+    <div id="notification" aria-live="polite"></div>
   </div>
 
-  <div class="dropdown">
-    <button onclick="toggleDropdown('chapterDropdown')" class="dropbtn">Chapter</button>
-    <div id="chapterDropdown" class="dropdown-content">
-      <input type="text" placeholder="New Chapter" id="newChapterInput">
-      <a onclick="addNewChapter()">+ Add</a>
-    </div>
-  </div>
-
-  <div class="dropdown">
-    <button onclick="toggleDropdown('topicDropdown')" class="dropbtn">Topic</button>
-    <div id="topicDropdown" class="dropdown-content">
-      <input type="text" placeholder="New Topic" id="newTopicInput">
-      <a onclick="addNewTopic()">+ Add</a>
-    </div>
-  </div>
-
-  <div class="dropdown">
-    <button onclick="toggleDropdown('questionTypeDropdown')" class="dropbtn">Question Type</button>
-    <div id="questionTypeDropdown" class="dropdown-content">
-
-      <input type="text" placeholder="New Question Type" id="newQuestionTypeInput">
-      <a onclick="addNewQuestionType()">+ Add</a>
-    </div>
-  </div>
-</section>
-
-<section id="current-selection" style="margin-left: 10%; margin-top: 10px; font-size: 18px;">
-  <strong>Currently Selected:</strong>
-  <span id="current-grade">Grade: None</span> |
-  <span id="current-chapter">Chapter: None</span> |
-  <span id="current-topic">Topic: None</span> |
-  <span id="current-questionType">Type: None</span>
-</section>
-<!-- Form -->
-<div class="content">
-  <form id="question-form">
-    <input type="text" name="question" placeholder="Question" required>
-    <input type="text" name="answer" placeholder="Answer" required>
-    <button type="submit">Add Question</button>
-  </form>
-
-  <ul id="question-list"></ul>
-</div>
-
-
-<!-- Firebase Config -->
-<script>
-  var config = {
-    apiKey: "AIzaSyDEeH5L9mYt4V07voQAgz32o-NV1h4B59U",
-    authDomain: "don-t-be-late-e3d9b.firebaseapp.com",
-    projectId: "don-t-be-late-e3d9b",
-    storageBucket: "don-t-be-late-e3d9b.firebasestorage.app",
-    messagingSenderId: "448144006032",
-    appId: "1:448144006032:web:971617f191a315d2277115"
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(config);
-  const db = firebase.firestore();
-  // Store dropdown selections
-  const selected = { grade: "", chapter: "", topic: "", questionType: "" };
-
-  function addNewGrade() {
-    const grade = document.getElementById('newGradeInput').value.trim();
-    if (!grade) return alert("Grade name is empty.");
-    db.collection("Grades").doc(grade).set({ createdAt: Date.now() });
-    alert("Grade added. Refresh the page to see it.");
-  }
-
-  function addNewChapter() {
-    if (!selected.grade) return alert("Select a grade first.");
-    const chapter = document.getElementById('newChapterInput').value.trim();
-    if (!chapter) return alert("Chapter name is empty.");
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(chapter).set({ createdAt: Date.now() });
-    alert("Chapter added. Refresh the page to see it.");
-  }
-
-  function addNewTopic() {
-    if (!selected.grade || !selected.chapter) return alert("Select grade and chapter.");
-    const topic = document.getElementById('newTopicInput').value.trim();
-    if (!topic) return alert("Topic name is empty.");
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics").doc(topic).set({ createdAt: Date.now() });
-    alert("Topic added. Refresh to see it.");
-  }
-
-  function addNewQuestionType() {
-    if (!selected.grade || !selected.chapter || !selected.topic) return alert("Select grade, chapter, topic.");
-    const qtype = document.getElementById('newQuestionTypeInput').value.trim();
-    if (!qtype) return alert("Question type is empty.");
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics").doc(selected.topic)
-            .collection("QuestionTypes").doc(qtype).set({ createdAt: Date.now() });
-    alert("Question type added. Refresh to see it.");
-  }
-
-
-  function toggleDropdown(id) {
-    // First close all dropdowns
-    const dropdowns = document.getElementsByClassName("dropdown-content");
-    for (let i = 0; i < dropdowns.length; i++) {
-      if (dropdowns[i].id !== id) {
-        dropdowns[i].classList.remove("show");
-      }
-    }
-
-    // Then toggle the one that was clicked
-    document.getElementById(id).classList.toggle("show");
-  }
-
-  function selectOption(value, category) {
-    selected[category] = value;
-    console.log(`Selected ${category}: ${value}`);
-
-    if (category === 'grade') {
-      selected.chapter = '';
-      selected.topic = '';
-      selected.questionType = '';
-      loadChapters();
-    }
-
-    if (category === 'chapter') {
-      selected.topic = '';
-      selected.questionType = '';
-      loadTopics();
-    }
-
-    if (category === 'topic') {
-      selected.questionType = '';
-      loadQuestionTypes();
-    }
-
-    if (category === 'questionType') {
-      loadQuestions();
-    }
-  }
-  document.getElementById('current-grade').textContent = "Grade: " + (selected.grade);
-  document.getElementById('current-chapter').textContent = "Chapter: " + (selected.chapter || "None");
-  document.getElementById('current-topic').textContent = "Topic: " + (selected.topic || "None");
-  document.getElementById('current-questionType').textContent = "Type: " + (selected.questionType || "None");
-
-  // Handle form submission
-  document.getElementById('question-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const question = this.question.value.trim();
-    const answer = this.answer.value.trim();
-
-    if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) {
-      alert("Please select grade, chapter, topic, and question type.");
-      return;
-    }
-
-    const ref = db
-            .collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics").doc(selected.topic)
-            .collection("QuestionTypes").doc(selected.questionType)
-            .collection("Questions");
-
-    ref.add({ question, answer })
-            .then(() => {
-              alert("Question added successfully!");
-              this.reset();
-            })
-            .catch(err => {
-              console.error("Error adding question:", err);
-              alert("Failed to add question.");
-            });
-  });
-
-  // Close dropdowns on outside click
-  window.onclick = function(event) {
-    if (!event.target.matches('.dropbtn')) {
-      const dropdowns = document.getElementsByClassName("dropdown-content");
-      for (let i = 0; i < dropdowns.length; i++) {
-        dropdowns[i].classList.remove("show");
-      }
-    }
-  };
-
-  function loadGrades() {
-    const dropdown = document.getElementById("gradeDropdown");
-
-    // Listen for live updates
-    db.collection("Grades").onSnapshot(snapshot => {
-      console.log("Grades fetched:", snapshot.size); // 🔍 Check if it's being called
-      dropdown.innerHTML = '';
-
-      snapshot.forEach(doc => {
-        const a = document.createElement("a");
-        a.textContent = doc.id;
-        a.onclick = () => selectOption(doc.id, 'grade');
-        dropdown.appendChild(a);
-      });
-
-      const input = document.createElement("input");
-      input.placeholder = "New grade";
-      input.id = "newGradeInput";
-      dropdown.appendChild(input);
-
-      const addBtn = document.createElement("a");
-      addBtn.textContent = "+ Add";
-      addBtn.onclick = addNewGrade;
-      dropdown.appendChild(addBtn);
-    });
-  }
-
-  function loadChapters() {
-    const dropdown = document.getElementById("chapterDropdown");
-    dropdown.innerHTML = '';
-    if (!selected.grade) return;
-
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters")
-            .onSnapshot(snapshot => {
-              dropdown.innerHTML = '';
-
-              snapshot.forEach(doc => {
-                const a = document.createElement("a");
-                a.textContent = doc.id;
-                a.onclick = () => selectOption(doc.id, 'chapter');
-                dropdown.appendChild(a);
-              });
-
-              const input = document.createElement("input");
-              input.placeholder = "New chapter";
-              input.id = "newChapterInput";
-              dropdown.appendChild(input);
-
-              const addBtn = document.createElement("a");
-              addBtn.textContent = "+ Add";
-              addBtn.onclick = addNewChapter;
-              dropdown.appendChild(addBtn);
-            });
-  }
-
-
-  function loadTopics() {
-    const dropdown = document.getElementById("topicDropdown");
-    dropdown.innerHTML = '';
-    if (!selected.grade || !selected.chapter) return;
-
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics")
-            .onSnapshot(snapshot => {
-              dropdown.innerHTML = '';
-
-              snapshot.forEach(doc => {
-                const a = document.createElement("a");
-                a.textContent = doc.id;
-                a.onclick = () => selectOption(doc.id, 'topic');
-                dropdown.appendChild(a);
-              });
-
-              const input = document.createElement("input");
-              input.placeholder = "New topic";
-              input.id = "newTopicInput";
-              dropdown.appendChild(input);
-
-              const addBtn = document.createElement("a");
-              addBtn.textContent = "+ Add";
-              addBtn.onclick = addNewTopic;
-              dropdown.appendChild(addBtn);
-            });
-  }
-
-
-  function loadQuestionTypes() {
-    const dropdown = document.getElementById("questionTypeDropdown");
-    dropdown.innerHTML = '';
-    if (!selected.grade || !selected.chapter || !selected.topic) return;
-
-    db.collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics").doc(selected.topic)
-            .collection("QuestionTypes")
-            .onSnapshot(snapshot => {
-              dropdown.innerHTML = '';
-
-              snapshot.forEach(doc => {
-                const a = document.createElement("a");
-                a.textContent = doc.id;
-                a.onclick = () => selectOption(doc.id, 'questionType');
-                dropdown.appendChild(a);
-              });
-
-              const input = document.createElement("input");
-              input.placeholder = "New question type";
-              input.id = "newQuestionTypeInput";
-              dropdown.appendChild(input);
-
-              const addBtn = document.createElement("a");
-              addBtn.textContent = "+ Add";
-              addBtn.onclick = addNewQuestionType;
-              dropdown.appendChild(addBtn);
-            });
-  }
-
-  function loadQuestions() {
-    const questionList = document.getElementById('question-list');
-    questionList.innerHTML = '';
-
-    if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) return;
-
-    const ref = db
-            .collection("Grades").doc(selected.grade)
-            .collection("Chapters").doc(selected.chapter)
-            .collection("Topics").doc(selected.topic)
-            .collection("QuestionTypes").doc(selected.questionType)
-            .collection("Questions");
-
-    ref.get().then(snapshot => {
-      snapshot.forEach(doc => {
-        const li = document.createElement("li");
-        const qSpan = document.createElement("span");
-        const aSpan = document.createElement("span");
-        const del = document.createElement("div");
-
-        li.setAttribute("data-id", doc.id);
-        qSpan.textContent = doc.data().question;
-        aSpan.textContent = doc.data().answer;
-        del.textContent = "x";
-
-        li.appendChild(qSpan);
-        li.appendChild(aSpan);
-        li.appendChild(del);
-
-        questionList.appendChild(li);
-
-        del.addEventListener("click", () => {
-          ref.doc(doc.id).delete();
-        });
-      });
-    });
-  }
-
-  window.onload = () => {
-    loadGrades();
-  };
-
-</script>
-<script src="app.js"></script>
+  <!-- Your app script (loads after firebase libs above) -->
+  <script src="app.js" defer></script>
 </body>
 </html>

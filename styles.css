@@ -76,7 +76,7 @@ h1 {
 }
 .dropdown-content a {
   display: block;
-  padding: 8px 10px;
+  padding: 0; /* FIXED: Removed default padding from links */
   border-radius: 6px;
   color: #0f1724;
   text-decoration: none;
@@ -85,6 +85,79 @@ h1 {
 .dropdown-content a:hover { background: #f1f5f4; }
 .dropdown-content a.selected { background: var(--accent); color: #fff; }
 
+/* Style for dropdown items with a delete button (FIXED SECTION) */
+.dropdown-item-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    /* Apply padding and styling to the container to act as the clickable area */
+    padding: 8px 10px; 
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 2px 0;
+}
+
+/* Add hover effect to the container for link-like behavior */
+.dropdown-item-container:hover {
+    background-color: #f1f5f4;
+}
+/* Ensure the selected state also applies to the container */
+.dropdown-item-container a.selected { 
+    background: none;
+    color: white; 
+}
+.dropdown-item-container a.selected + .delete-dropdown-item {
+    background: #0b7f78; /* Darker accent color for delete button in selected state */
+}
+
+/* Style the inner link to fill the container, but leave room for the button */
+.dropdown-item-container a {
+    flex-grow: 1; 
+    padding-right: 25px; /* Ensures the link content leaves space for the button */
+}
+
+/* Style for the delete button */
+.delete-dropdown-item {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--error);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s, background 0.2s;
+    padding: 0;
+    z-index: 10;
+}
+
+.delete-dropdown-item:hover {
+    opacity: 1;
+    background: #c0303f;
+}
+
+/* Ensure the input and + Add button are still at the bottom */
+#gradeDropdown input, #gradeDropdown a:last-child,
+#chapterDropdown input, #chapterDropdown a:last-child,
+#topicDropdown input, #topicDropdown a:last-child,
+#questionTypeDropdown input, #questionTypeDropdown a:last-child {
+    /* Reset layout for the input and add button at the bottom */
+    display: block;
+    width: 100%;
+    padding-right: 12px;
+    position: static;
+    transform: none;
+}
 /* current selection */
 #current-selection {
   margin: 10px 0 18px;
@@ -184,15 +257,15 @@ form input:focus{
     font-weight:600; 
 }
 
-/* Delete Button Styling */
-#question-list li div:last-child { 
-  /* The delete button added by your app.js logic is a <div> */
+/* Delete Button Styling (Targeting the class added in app.js) */
+.delete-btn { 
   position: absolute;
   top: 50%;
   right: 12px;
   transform: translateY(-50%);
   background: var(--error);
   color: white;
+  border: none;
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -204,12 +277,85 @@ form input:focus{
   cursor: pointer;
   opacity: 0.8;
   transition: opacity 0.2s, background 0.2s;
+  padding: 0;
 }
 
-#question-list li div:last-child:hover {
+.delete-btn:hover {
   opacity: 1;
   background: #c0303f; /* Slightly darker error color on hover */
 }
+
+/* --- Question List Styling ADDITIONS --- */
+
+/* Style the checkbox next to the question */
+#question-list li .question-checkbox {
+    margin-right: 12px;
+    /* Optional: Style to make it look nicer */
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+/* Style the mass delete button */
+#massDeleteBtn {
+    margin: 12px 0;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    background: var(--error);
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+#massDeleteBtn:hover:not(.disabled-delete-btn) {
+    background: #c0303f;
+}
+
+/* Style for disabled state */
+.disabled-delete-btn {
+    background: #e9e9e9 !important; 
+    color: #999 !important;
+    cursor: not-allowed !important;
+}
+
+/* --- Form Styling for Image Input / Checkbox --- */
+.form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-top: 10px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.checkbox-item {
+    font-size: 14px;
+    margin-bottom: 15px;
+    padding: 5px 0;
+}
+
+.checkbox-item input {
+    margin-right: 8px;
+    cursor: pointer;
+    vertical-align: middle; 
+}
+
+/* --- List Styling for Image Badge --- */
+.img-badge {
+    background: #e0f2f1; /* Light teal */
+    color: #00695c; 
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-bottom: 6px;
+    margin-right: 12px;
+}
+
 /* --- End Question List Styling --- */
 
 /* notification */

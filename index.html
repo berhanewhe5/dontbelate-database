@@ -46,11 +46,22 @@
     </section>
 
     <div class="content">
-      <form id="question-form">
-        <input type="text" name="question" placeholder="Enter question..." required />
-        <input type="text" name="answer" placeholder="Enter answer..." required />
-        <button type="submit" id="submitBtn" disabled>Add Question</button>
-      </form>
+        <form id="question-form">
+  
+          
+
+          <div id="imageContainer" style="display: none;">
+              <input type="text" id="imageFileName" name="imageFileName" placeholder="Image File Name: e.g. 'chapter1/diagram_q3.png'" />
+          </div>
+
+          <input type="text" name="question" placeholder="Enter question..." required />
+          <input type="text" name="answer" placeholder="Enter answer..." required />
+          <div class="checkbox-item">
+            <input type="checkbox" id="hasImageCheck">
+            <label for="hasImageCheck">Question contains image?</label>
+          </div>
+          <button type="submit" id="submitBtn" disabled>Add Question</button>
+        </form>
 
       <div id="question-preview">
         <h2>Preview</h2>
@@ -59,7 +70,7 @@
           <div class="preview-answer"><strong>A:</strong> <span id="preview-answer"></span></div>
         </div>
       </div>
-
+      <button id="massDeleteBtn" class="disabled-delete-btn" disabled>Delete Selected Questions</button>
       <ul id="question-list"></ul>
     </div>
 

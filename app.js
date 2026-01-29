@@ -32,6 +32,21 @@ if (loginBtn) {
   });
 }
 
+const googleBtn = document.getElementById("googleBtn");
+
+if (googleBtn) {
+  googleBtn.addEventListener("click", async () => {
+    authError.textContent = "";
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    try {
+      await auth.signInWithPopup(provider);
+    } catch (e) {
+      authError.textContent = e.message;
+    }
+  });
+}
+
 // Optional logout
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {

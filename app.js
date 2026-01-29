@@ -9,6 +9,53 @@ var config = {
 };
 firebase.initializeApp(config);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// UI elements
+const authGate = document.getElementById("authGate");
+const appContainer = document.getElementById("appContainer");
+const authError = document.getElementById("authError");
+
+const loginBtn = document.getElementById("loginBtn");
+if (loginBtn) {
+  loginBtn.addEventListener("click", async () => {
+    authError.textContent = "";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (e) {
+      authError.textContent = e.message;
+    }
+  });
+}
+
+// Optional logout
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => auth.signOut());
+}
+
+// Gate the app
+let appInitialized = false;
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    authGate.style.display = "none";
+    appContainer.style.display = "block";
+
+    if (!appInitialized) {
+      appInitialized = true;
+      initUploaderApp();
+    }
+  } else {
+    appContainer.style.display = "none";
+    authGate.style.display = "block";
+    appInitialized = false; // optional (only if you want re-init after logout)
+  }
+});
 
 // ====== State & elements ======
 const selected = { grade: "", chapter: "", topic: "", questionType: "" };
@@ -882,7 +929,7 @@ function massDeleteQuestions() {
 }
 
 // ====== init ======
-window.onload = () => {
+function initUploaderApp() {
   loadGrades();
   loadChapters();
   loadTopics();
@@ -902,4 +949,4 @@ window.onload = () => {
   // NEW: Attach listener for the image visibility toggle and initialize state
   document.getElementById('hasImageCheck').addEventListener('change', updateImageInputVisibility);
   updateImageInputVisibility(); // Initialize visibility state
-};
+}

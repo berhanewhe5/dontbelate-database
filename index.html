@@ -10,96 +10,109 @@
   <!-- Firebase (must load before app.js) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Don't Be Late! Question Uploader</h1>
+    <!-- LOGIN GATE -->
+  <div id="authGate" class="container" style="max-width:520px;">
+    <h1>Don't Be Late! Uploader</h1>
+    <h2 style="margin-top:0;">Sign in</h2>
 
-    <div class="dropdown-selectors">
-      <div class="dropdown">
-        <button class="dropbtn" id="gradeBtn" onclick="toggleDropdown('gradeDropdown')">Grade ▼</button>
-        <div id="gradeDropdown" class="dropdown-content"></div>
-      </div>
+    <input id="email" type="email" placeholder="Email" required />
+    <input id="password" type="password" placeholder="Password" required />
 
-      <div class="dropdown">
-        <button class="dropbtn disabled" id="chapterBtn" onclick="toggleDropdown('chapterDropdown')">Chapter ▼</button>
-        <div id="chapterDropdown" class="dropdown-content"></div>
-      </div>
-
-      <div class="dropdown">
-        <button class="dropbtn disabled" id="topicBtn" onclick="toggleDropdown('topicDropdown')">Topic ▼</button>
-        <div id="topicDropdown" class="dropdown-content"></div>
-      </div>
-
-      <div class="dropdown">
-        <button class="dropbtn disabled" id="questionTypeBtn" onclick="toggleDropdown('questionTypeDropdown')">Question Type ▼</button>
-        <div id="questionTypeDropdown" class="dropdown-content"></div>
-      </div>
-    </div>
-
-    <section id="current-selection">
-      <strong>Currently Selected:</strong>
-      <span id="current-grade">Grade: None</span> |
-      <span id="current-chapter">Chapter: None</span> |
-      <span id="current-topic">Topic: None</span> |
-      <span id="current-questionType">Type: None</span>
-    </section>
-
-    <span id="totalQuestionsDisplay" style="margin-left:8px; font-size:14px; color:gray;"></span>
-
-
-    <div class="content">
-        <form id="question-form">
-          <div id="imageContainer" style="display: none;">
-              <input type="text" id="imageFileName" name="imageFileName" placeholder="Image File Name: e.g. 'chapter1/diagram_q3.png'" />
-          </div>
-
-          <input type="text" name="question" placeholder="Enter question..." required />
-          <input type="text" name="answer" placeholder="Enter answer..." required />
-
-          <!-- NEW: explanation field (optional) -->
-          <input 
-            type="text"
-            name="explanation" 
-            id="explanation" 
-            placeholder="Enter explanation for this question (Optional Initially but every question requires it)" 
-            rows="3" />
-          <input
-          type="text"
-          name="hint"
-          id="hint"
-          placeholder="Enter hint for this question (optional)" />
-          <div class="checkbox-item">
-            <input type="checkbox" id="hasImageCheck">
-            <label for="hasImageCheck">Question contains image?</label>
-          </div>
-          <button type="submit" id="submitBtn" disabled>Add Question</button>
-        </form>
-        <div id="notification" aria-live="polite"></div>
-
-      <div id="question-preview">
-        <h2>Preview</h2>
-        <div class="preview-body">
-          <div><strong>Q:</strong> <span id="preview-question"></span></div>
-          <div class="preview-answer"><strong>A:</strong> <span id="preview-answer"></span></div>
-          <!-- NEW: explanation preview -->
-          <div class="preview-explanation">
-            <strong>Explanation:</strong> <span id="preview-explanation"></span>
-          </div>
-          <div class="preview-hint">
-            <strong>Hint:</strong> <span id="preview-hint"></span>
-          </div>
-        </div>
-      </div>
-      <!-- NEW: Mass delete + question list (what your JS expects) -->
-      <button id="massDeleteBtn" class="disabled-delete-btn" disabled>
-        Delete Selected Questions
-      </button>
-      <ul id="question-list"></ul>    
-    
-    
+    <button id="loginBtn">Log in</button>
+    <p id="authError" style="color:#dc3545; font-weight:700;"></p>
   </div>
 
+  <!-- YOUR APP (HIDDEN UNTIL LOGIN) -->
+  <div id="appContainer" style="display:none;">
+    <button id="logoutBtn" style="float:right;">Log out</button>  
+      <div class="container">
+      <h1>Don't Be Late! Question Uploader</h1>
+
+      <div class="dropdown-selectors">
+        <div class="dropdown">
+          <button class="dropbtn" id="gradeBtn" onclick="toggleDropdown('gradeDropdown')">Grade ▼</button>
+          <div id="gradeDropdown" class="dropdown-content"></div>
+        </div>
+
+        <div class="dropdown">
+          <button class="dropbtn disabled" id="chapterBtn" onclick="toggleDropdown('chapterDropdown')">Chapter ▼</button>
+          <div id="chapterDropdown" class="dropdown-content"></div>
+        </div>
+
+        <div class="dropdown">
+          <button class="dropbtn disabled" id="topicBtn" onclick="toggleDropdown('topicDropdown')">Topic ▼</button>
+          <div id="topicDropdown" class="dropdown-content"></div>
+        </div>
+
+        <div class="dropdown">
+          <button class="dropbtn disabled" id="questionTypeBtn" onclick="toggleDropdown('questionTypeDropdown')">Question Type ▼</button>
+          <div id="questionTypeDropdown" class="dropdown-content"></div>
+        </div>
+      </div>
+
+      <section id="current-selection">
+        <strong>Currently Selected:</strong>
+        <span id="current-grade">Grade: None</span> |
+        <span id="current-chapter">Chapter: None</span> |
+        <span id="current-topic">Topic: None</span> |
+        <span id="current-questionType">Type: None</span>
+      </section>
+
+      <span id="totalQuestionsDisplay" style="margin-left:8px; font-size:14px; color:gray;"></span>
+
+
+      <div class="content">
+          <form id="question-form">
+            <div id="imageContainer" style="display: none;">
+                <input type="text" id="imageFileName" name="imageFileName" placeholder="Image File Name: e.g. 'chapter1/diagram_q3.png'" />
+            </div>
+
+            <input type="text" name="question" placeholder="Enter question..." required />
+            <input type="text" name="answer" placeholder="Enter answer..." required />
+
+            <!-- NEW: explanation field (optional) -->
+            <input 
+              type="text"
+              name="explanation" 
+              id="explanation" 
+              placeholder="Enter explanation for this question (Optional Initially but every question requires it)" 
+              rows="3" />
+            <input
+            type="text"
+            name="hint"
+            id="hint"
+            placeholder="Enter hint for this question (optional)" />
+            <div class="checkbox-item">
+              <input type="checkbox" id="hasImageCheck">
+              <label for="hasImageCheck">Question contains image?</label>
+            </div>
+            <button type="submit" id="submitBtn" disabled>Add Question</button>
+          </form>
+          <div id="notification" aria-live="polite"></div>
+
+        <div id="question-preview">
+          <h2>Preview</h2>
+          <div class="preview-body">
+            <div><strong>Q:</strong> <span id="preview-question"></span></div>
+            <div class="preview-answer"><strong>A:</strong> <span id="preview-answer"></span></div>
+            <!-- NEW: explanation preview -->
+            <div class="preview-explanation">
+              <strong>Explanation:</strong> <span id="preview-explanation"></span>
+            </div>
+            <div class="preview-hint">
+              <strong>Hint:</strong> <span id="preview-hint"></span>
+            </div>
+          </div>
+        </div>
+        <!-- NEW: Mass delete + question list (what your JS expects) -->
+        <button id="massDeleteBtn" class="disabled-delete-btn" disabled>
+          Delete Selected Questions
+        </button>
+        <ul id="question-list"></ul>    
+    </div>
   <!-- Your app script (loads after firebase libs above) -->
   <script src="app.js" defer></script>
 </body>

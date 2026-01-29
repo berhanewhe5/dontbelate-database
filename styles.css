@@ -343,6 +343,68 @@ form input:focus{
     vertical-align: middle; 
 }
 
+/* Question text */
+#question-list li .q {
+  display: block;
+  font-weight: 600;
+  color: #0f1724;
+  margin-bottom: 4px;
+}
+
+/* Answer text */
+#question-list li .a {
+  display: block;
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+#question-list li .e {
+  width: 100%;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+/* Explanation row container */
+.ex-row {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* Explanation label */
+.ex-label {
+  flex-shrink: 0;
+}
+
+/* Editable explanation area */
+.ex-row .e {
+  display: inline-block;
+  min-height: 18px;        /* visible even when empty */
+  border-bottom: 1px dashed #d1d5db;
+  padding: 0 2px;
+  white-space: pre-wrap;
+}
+
+#question-list li .h {
+  width: 100%;
+  font-size: 0.9rem;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+
 /* --- List Styling for Image Badge --- */
 .img-badge {
     background: #e0f2f1; /* Light teal */

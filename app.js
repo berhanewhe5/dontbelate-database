@@ -17,7 +17,62 @@ const submitBtn = document.getElementById('submitBtn');
 const form = document.getElementById('question-form');
 const previewQ = document.getElementById('preview-question');
 const previewA = document.getElementById('preview-answer');
+const previewE = document.getElementById('preview-explanation'); // NEW
+const previewH = document.getElementById('preview-hint'); // NEW
 const questionList = document.getElementById('question-list');
+
+const gradeBtn = document.getElementById('gradeBtn');
+const chapterBtn = document.getElementById('chapterBtn');
+const topicBtn = document.getElementById('topicBtn');
+const questionTypeBtn = document.getElementById('questionTypeBtn');
+
+const totalQuestionsDisplay = document.getElementById('totalQuestionsDisplay');
+
+
+function listenToTotalQuestionCount() {
+  db.collection('Meta')
+    .doc('QuestionStats')
+    .onSnapshot(
+      (doc) => {
+        const data = doc.data();
+        const total = data?.totalQuestions ?? 0;
+
+        if (totalQuestionsDisplay) {
+          totalQuestionsDisplay.textContent = `Total questions: ${total}`;
+        }
+      },
+      (err) => {
+        console.error('Error listening to totalQuestions:', err);
+        if (totalQuestionsDisplay) {
+          totalQuestionsDisplay.textContent = '(unable to load total questions)';
+        }
+      }
+    );
+}
+// function recalcTotalQuestions() {
+//   showNotification('Recalculating total questions...', 'success');
+
+//   db.collectionGroup('Questions').get()
+//     .then(snapshot => {
+//       const total = snapshot.size;
+//       return db.collection('Meta')
+//         .doc('QuestionStats')
+//         .set(
+//           {
+//             totalQuestions: total,
+//             recalculatedAt: Date.now()
+//           },
+//           { merge: true }
+//         )
+//         .then(() => {
+//           showNotification(`Total questions recalculated: ${total}`, 'success');
+//         });
+//     })
+//     .catch(err => {
+//       console.error('Recalc error', err);
+//       showNotification('Failed to recalculate total questions.', 'error');
+//     });
+// } 
 
 // ====== utilities ======
 function showNotification(msg, type='success'){
@@ -75,16 +130,36 @@ window.addEventListener('click', (e)=>{
 
 // ====== update UI state ======
 function updateCurrentSelection(){
+  // Update "Currently Selected" text area
   document.getElementById('current-grade').textContent = "Grade: " + (selected.grade || "None");
   document.getElementById('current-chapter').textContent = "Chapter: " + (selected.chapter || "None");
   document.getElementById('current-topic').textContent = "Topic: " + (selected.topic || "None");
   document.getElementById('current-questionType').textContent = "Type: " + (selected.questionType || "None");
 
+  // Enable/disable submit button
   submitBtn.disabled = !(selected.grade && selected.chapter && selected.topic && selected.questionType);
 
-  document.getElementById('chapterBtn').classList.toggle('disabled', !selected.grade);
-  document.getElementById('topicBtn').classList.toggle('disabled', !selected.chapter);
-  document.getElementById('questionTypeBtn').classList.toggle('disabled', !selected.topic);
+  // Enable/disable dropdowns based on previous choice
+  chapterBtn.classList.toggle('disabled', !selected.grade);
+  topicBtn.classList.toggle('disabled', !selected.chapter);
+  questionTypeBtn.classList.toggle('disabled', !selected.topic);
+
+  // 🔽 NEW: Update button labels to show what is currently selected
+  gradeBtn.textContent = selected.grade 
+    ? `Grade: ${selected.grade} ▼` 
+    : 'Grade ▼';
+
+  chapterBtn.textContent = selected.chapter 
+    ? `Chapter: ${selected.chapter} ▼`
+    : 'Chapter ▼';
+
+  topicBtn.textContent = selected.topic 
+    ? `Topic: ${selected.topic} ▼`
+    : 'Topic ▼';
+
+  questionTypeBtn.textContent = selected.questionType 
+    ? `Type: ${selected.questionType} ▼`
+    : 'Question Type ▼';
 }
 
 // called when user picks an option
@@ -103,59 +178,98 @@ function selectOption(value, category){
 
 // ====== preview handling ======
 form.question.addEventListener('input', e => previewQ.textContent = e.target.value);
-form.answer.addEventListener('input', e => previewA.textContent = e.target.value);
-
+form.answer.addEventListener('input',  e => previewA.textContent = e.target.value);
+form.explanation.addEventListener('input', e => previewE.textContent = e.target.value); // NEW
+form.hint.addEventListener('input', e => previewH.textContent = e.target.value); // NEW
 // NEW: Read the image file name (it will be empty if the checkbox was unchecked)
 const imageFileName = document.getElementById('imageFileName').value.trim();
 
 // ====== form submit ======
-form.addEventListener('submit', e=>{
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if(!selected.grade || !selected.chapter || !selected.topic || !selected.questionType){
-    showNotification('Please select grade, chapter, topic and question type.', 'error'); return;
+
+  if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) {
+    showNotification('Please select grade, chapter, topic and question type.', 'error'); 
+    return;
   }
-  
-  // 1. Read the image file name
+
+  // Cleaned-up field values
+  const questionText = form.question.value.trim();
+  const answerText   = form.answer.value.trim();
+  const explanation  = form.explanation.value.trim();
+  const hint         = form.hint.value.trim();
   const imageFileName = document.getElementById('imageFileName').value.trim();
 
+  if (!questionText || !answerText) {
+    return showNotification('Question and answer are required.', 'error');
+  }
+
+  // Reference to current Questions collection
   const ref = db.collection("Grades").doc(selected.grade)
     .collection("Chapters").doc(selected.chapter)
     .collection("Topics").doc(selected.topic)
     .collection("QuestionTypes").doc(selected.questionType)
     .collection("Questions");
 
-  // 2. Build the base data object
-  const questionData = {
-    question: form.question.value.trim(), 
-    answer: form.answer.value.trim(), 
-    createdAt: Date.now() 
-  };
-    
-  // 3. CRITICAL FIX: Only add the imageFileName field if the string is NOT empty
-  if (imageFileName) {
+  try {
+    // 🔍 1) CHECK FOR DUPLICATE (same question + answer in this QuestionType)
+    const dupSnap = await ref
+      .where('question', '==', questionText)
+      .where('answer', '==', answerText)
+      .limit(1)
+      .get();
+
+    if (!dupSnap.empty) {
+      showNotification('This exact question and answer already exist in this Question Type.', 'error');
+      return;
+    }
+
+    // 2) Build data
+    const questionData = {
+      question: questionText,
+      answer: answerText,
+      createdAt: Date.now()
+    };
+
+    if (imageFileName) {
       questionData.imageFileName = imageFileName;
-  }
-  
-  // 4. Submit the conditionally built object
-  ref.add(questionData)
-    .then(()=> {
-      showNotification('Question added!');
-      form.reset();
-      previewQ.textContent = '';
-      previewA.textContent = '';
-      
-      // Reset image related fields and checkbox state
-      document.getElementById('imageFileName').value = ''; 
-      hasImageCheck.checked = false; // Reset checkbox
-      updateImageInputVisibility(); // Hide container again
-    })
-    .catch(err => {
-      console.error('Submission error', err);
-      showNotification('Failed to add question.', 'error');
-    });
+    }
+    if (explanation) {
+      questionData.explanation = explanation;
+    }
+    if (hint) {
+      questionData.hint = hint;
+    }
+
+    // 3) Add question
+    await ref.add(questionData);
+
+    // 4) Increment global counter
+    await db.collection('Meta').doc('QuestionStats')
+      .set(
+        { totalQuestions: firebase.firestore.FieldValue.increment(1) },
+        { merge: true }
+      );
+
+    // 5) UI reset
+    showNotification('Question added!');
+    form.reset();
+    previewQ.textContent = '';
+    previewA.textContent = '';
+    previewE.textContent = '';
+    previewH.textContent = '';
+
+    document.getElementById('imageFileName').value = '';
+    hasImageCheck.checked = false;
+    updateImageInputVisibility();
 
     updateCurrentSelection();
     loadQuestions();
+
+  } catch (err) {
+    console.error('Submission error', err);
+    showNotification('Failed to add question.', 'error');
+  }
 });
 
 // ====== Question Deletion Functionality ======
@@ -174,7 +288,8 @@ function deleteQuestion(docId){
       console.error('Delete error', err);
       showNotification('Failed to delete question.', 'error');
     });
-
+  db.collection('Meta').doc('QuestionStats')
+  .set({ totalQuestions: firebase.firestore.FieldValue.increment(-1) }, { merge: true });
   updateCurrentSelection();
   loadQuestions();
 }
@@ -591,82 +706,124 @@ function addNewQuestionType(e){
 // ====== load questions (RESTORED REAL-TIME LISTENER) ======
 let questionsUnsubscribe = null;
 function loadQuestions() {
- const questionList = document.getElementById('question-list');
- questionList.innerHTML = '';
- 
- if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) return;
- 
- const ref = db
- .collection("Grades").doc(selected.grade)
- .collection("Chapters").doc(selected.chapter)
- .collection("Topics").doc(selected.topic)
- .collection("QuestionTypes").doc(selected.questionType)
- .collection("Questions");
- 
- ref.get().then(snapshot => {
- snapshot.forEach(doc => {
-  const data = doc.data();
- const li = document.createElement("li");
- const qSpan = document.createElement("span");
- const aSpan = document.createElement("span");
- const del = document.createElement("div");
+  const questionList = document.getElementById('question-list');
+  if (!questionList) return;  // safety
 
-
+  questionList.innerHTML = '';
  
- li.setAttribute("data-id", doc.id);
- const imgBadge = data.imageFileName 
-                ? `<span class="img-badge">🖼️ File: <strong>${escapeHtml(data.imageFileName)}</strong></span>` 
-                : '';
- qSpan.textContent = doc.data().question;
- aSpan.textContent = doc.data().answer;
- del.textContent = "x";
+  if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) return;
  
- li.appendChild(qSpan);
- li.appendChild(aSpan);
- li.appendChild(del);
+  const ref = db
+    .collection("Grades").doc(selected.grade)
+    .collection("Chapters").doc(selected.chapter)
+    .collection("Topics").doc(selected.topic)
+    .collection("QuestionTypes").doc(selected.questionType)
+    .collection("Questions");
+ 
+  ref.get().then(snapshot => {
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const li = document.createElement("li");
 
- // NEW: HTML for the image badge, only included if a file name exists
+      li.setAttribute("data-id", doc.id);
 
-li.innerHTML = `
-                <input type="checkbox" class="question-checkbox" data-id="${doc.id}">
-                ${imgBadge} 
-                <span class="q" data-field="question" contenteditable="true">${escapeHtml(data.question)}</span>
-                <span class="a" data-field="answer" contenteditable="true">${escapeHtml(data.answer)}</span>
-                <button class="delete-btn" data-id="${doc.id}">x</button>`;
-  
-  questionList.appendChild(li);
+      const imgBadge = data.imageFileName 
+        ? `<span class="img-badge">🖼️ File: <strong>${escapeHtml(data.imageFileName)}</strong></span>` 
+        : '';
 
-  // Add event listener for the delete button
-  li.querySelector('.delete-btn').addEventListener('click', () => deleteQuestion(doc.id));
-  li.querySelector('.q').addEventListener('blur', (e) => updateQuestionField(doc.id, 'question', e.target.textContent));
-  li.querySelector('.a').addEventListener('blur', (e) => updateQuestionField(doc.id, 'answer', e.target.textContent));
- questionList.appendChild(li);
- updateMassDeleteButtonState();
- del.addEventListener("click", () => {
- ref.doc(doc.id).delete();
- });
- });
- });
- }   
+      // Build the row, including editable explanation
+      const explanationText = data.explanation || '';
+      const hintText = data.hint || ''; // NEW
+
+      li.innerHTML = `
+      <input type="checkbox" class="question-checkbox" data-id="${doc.id}">
+      ${imgBadge}
+      <div class="qa-block">
+        <span class="q" data-field="question" contenteditable="true">
+          ${escapeHtml(data.question || '')}
+        </span>
+        <span class="a" data-field="answer" contenteditable="true">
+          ${escapeHtml(data.answer || '')}
+        </span>
+        <div class="ex-row">
+          <strong class="ex-label">Explanation:</strong>
+          <input
+            class="e"
+            data-field="explanation"
+            type="text"
+            value="${escapeHtml(explanationText)}"
+          >
+        </div>
+        <div class="ex-row">
+          <strong class="ex-label">Hint:</strong>
+          <input
+            class="h"
+            data-field="hint"
+            type="text"
+            value="${escapeHtml(hintText)}"
+          >
+        </div>
+      </div>
+      <button class="delete-btn" data-id="${doc.id}">x</button>
+    `;
+
+      questionList.appendChild(li);
+
+      // Delete
+      li.querySelector('.delete-btn').addEventListener('click', () => deleteQuestion(doc.id));
+
+      // Inline edit: question
+      li.querySelector('.q').addEventListener('blur', (e) => {
+        updateQuestionField(doc.id, 'question', e.target.textContent);
+      });
+
+      // Inline edit: answer
+      li.querySelector('.a').addEventListener('blur', (e) => {
+        updateQuestionField(doc.id, 'answer', e.target.textContent);
+      });
+
+      // NEW: Inline edit: explanation
+      const eInput = li.querySelector('.e');
+      if (eInput) {
+        eInput.addEventListener('change', (e) => {
+          updateQuestionField(doc.id, 'explanation', e.target.value);
+        });
+      }
+
+      const hInput = li.querySelector('.h');
+      if (hInput) {
+        hInput.addEventListener('change', (e) => {
+          updateQuestionField(doc.id, 'hint', e.target.value);
+        });
+      }
+
+      updateMassDeleteButtonState();
+    });
+  });
+}
 
 function updateQuestionField(docId, fieldName, newValue) {
     if (!selected.grade || !selected.chapter || !selected.topic || !selected.questionType) {
         return showNotification('Cannot edit: Please select all categories.', 'error');
     }
     
-    // 1. Get the Firestore document reference
     const ref = db.collection("Grades").doc(selected.grade).collection("Chapters").doc(selected.chapter)
-        .collection("Topics").doc(selected.topic).collection("QuestionTypes").doc(selected.questionType).collection("Questions").doc(docId);
+        .collection("Topics").doc(selected.topic).collection("QuestionTypes").doc(selected.questionType)
+        .collection("Questions").doc(docId);
         
-    // 2. Prepare the update object
     const update = {};
-    update[fieldName] = newValue.trim(); // Trim the value before saving
+    update[fieldName] = newValue.trim();
 
-    // 3. Perform the update
     ref.update(update)
         .then(() => {
-            // Because loadQuestions uses an onSnapshot listener, the list will refresh automatically.
-            showNotification(`${fieldName === 'question' ? 'Question' : 'Answer'} updated!`);
+            let label;
+            if (fieldName === 'question') label = 'Question';
+            else if (fieldName === 'answer') label = 'Answer';
+            else if (fieldName === 'explanation') label = 'Explanation';
+            else if (fieldName === 'hint') label = 'Hint';    // NEW
+            else label = 'Field';
+
+            showNotification(`${label} updated!`);
         })
         .catch(err => {
             console.error('Update error', err);
@@ -720,6 +877,8 @@ function massDeleteQuestions() {
             console.error('Mass delete error', err);
             showNotification('Failed to delete selected questions.', 'error');
         });
+  db.collection('Meta').doc('QuestionStats')
+  .set({ totalQuestions: firebase.firestore.FieldValue.increment(-count) }, { merge: true });
 }
 
 // ====== init ======
@@ -739,7 +898,7 @@ window.onload = () => {
         updateMassDeleteButtonState();
     }
   });
-
+  listenToTotalQuestionCount();
   // NEW: Attach listener for the image visibility toggle and initialize state
   document.getElementById('hasImageCheck').addEventListener('change', updateImageInputVisibility);
   updateImageInputVisibility(); // Initialize visibility state

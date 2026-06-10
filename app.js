@@ -1,6 +1,6 @@
 // ====== Firebase config (keep your config) ======
 var config = {
-    apiKey: "AIzaSyDEeH5L9mYt4V07voQAgz32o-NV1h4B59U",
+    apiKey: "AIzaSyAL94kiPjRLnEQ-6f4WgvsqvigsFHknjcI",
     authDomain: "don-t-be-late-e3d9b.firebaseapp.com",
     projectId: "don-t-be-late-e3d9b",
     storageBucket: "don-t-be-late-e3d9b.firebasestorage.app",
@@ -8,6 +8,7 @@ var config = {
     appId: "1:448144006032:web:971617f191a315d2277115"
 };
 firebase.initializeApp(config);
+
 const db = firebase.firestore();
 const auth = firebase.auth();
 

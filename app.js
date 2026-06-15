@@ -965,4 +965,66 @@ function initUploaderApp() {
   // NEW: Attach listener for the image visibility toggle and initialize state
   document.getElementById('hasImageCheck').addEventListener('change', updateImageInputVisibility);
   updateImageInputVisibility(); // Initialize visibility state
+  document.getElementById('exportBtn').addEventListener('click', exportAllToCSV);
+}
+
+// ====== Export all questions to CSV ======
+async function exportAllToCSV() {
+  const btn = document.getElementById('exportBtn');
+  btn.textContent = '⏳ Exporting...';
+  btn.disabled = true;
+
+  try {
+    const gradesSnap = await db.collection('Grades').get();
+    const rows = [['Grade', 'Chapter', 'Topic', 'QuestionType', 'Question', 'Answer', 'Explanation', 'Hint', 'ImageFileName']];
+
+    for (const gradeDoc of gradesSnap.docs) {
+      const chaptersSnap = await db.collection('Grades').doc(gradeDoc.id).collection('Chapters').get();
+      for (const chapterDoc of chaptersSnap.docs) {
+        const topicsSnap = await db.collection('Grades').doc(gradeDoc.id)
+          .collection('Chapters').doc(chapterDoc.id).collection('Topics').get();
+        for (const topicDoc of topicsSnap.docs) {
+          const typesSnap = await db.collection('Grades').doc(gradeDoc.id)
+            .collection('Chapters').doc(chapterDoc.id)
+            .collection('Topics').doc(topicDoc.id).collection('QuestionTypes').get();
+          for (const typeDoc of typesSnap.docs) {
+            const questionsSnap = await db.collection('Grades').doc(gradeDoc.id)
+              .collection('Chapters').doc(chapterDoc.id)
+              .collection('Topics').doc(topicDoc.id)
+              .collection('QuestionTypes').doc(typeDoc.id)
+              .collection('Questions').get();
+            questionsSnap.forEach(qDoc => {
+              const d = qDoc.data();
+              rows.push([
+                gradeDoc.id, chapterDoc.id, topicDoc.id, typeDoc.id,
+                d.question || '', d.answer || '', d.explanation || '', d.hint || '', d.imageFileName || ''
+              ]);
+            });
+          }
+        }
+      }
+    }
+
+    // Build CSV string
+    const csv = rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+
+    // Trigger download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dont-be-late-questions-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showNotification(`Exported ${rows.length - 1} questions!`, 'success');
+  } catch (err) {
+    console.error('Export error', err);
+    showNotification('Export failed.', 'error');
+  } finally {
+    btn.textContent = '⬇ Export to CSV';
+    btn.disabled = false;
+  }
 }

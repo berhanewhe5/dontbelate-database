@@ -369,6 +369,18 @@ form input:focus{
   box-sizing: border-box;
 }
 
+#exportBtn {
+  margin: 12px 0 0 0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+#exportBtn:hover { background: var(--accent-dark); }
+
 /* Explanation row container */
 .ex-row {
   margin-top: 6px;

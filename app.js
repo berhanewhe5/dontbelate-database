@@ -966,6 +966,7 @@ function initUploaderApp() {
   document.getElementById('hasImageCheck').addEventListener('change', updateImageInputVisibility);
   updateImageInputVisibility(); // Initialize visibility state
   document.getElementById('exportBtn').addEventListener('click', exportAllToCSV);
+  document.getElementById('exportDocBtn').addEventListener('click', exportToDocx);
 }
 
 // ====== Export all questions to CSV ======
@@ -1026,5 +1027,161 @@ async function exportAllToCSV() {
   } finally {
     btn.textContent = '⬇ Export to CSV';
     btn.disabled = false;
+  }
+
+  // ====== Export Grade 4 questions to .docx ======
+  async function exportToDocx() {
+    const btn = document.getElementById('exportDocBtn');
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+
+    try {
+      if (!window.docx) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
+      const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = window.docx;
+
+      function numericSort(ids) {
+        return ids.sort((a, b) => {
+          const numA = parseInt(a.replace(/\D+/g, ''), 10);
+          const numB = parseInt(b.replace(/\D+/g, ''), 10);
+          return numA - numB;
+        });
+      }
+
+      function displayName(id) { return id.replace(/_/g, ' '); }
+
+      const children = [];
+
+      children.push(new Paragraph({
+        children: [new TextRun({ text: "Grade 4 — Don't Be Late! Question Bank", bold: true, size: 36, font: "Arial" })],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      }));
+
+      const chaptersSnap = await db.collection('Grades').doc('Grade_4').collection('Chapters').get();
+      const chapterIds = numericSort(chaptersSnap.docs.map(d => d.id));
+
+      for (const chapterId of chapterIds) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: displayName(chapterId), bold: true, size: 32, font: "Arial", color: "0F9D95" })],
+          spacing: { before: 400, after: 200 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "0F9D95", space: 1 } }
+        }));
+
+        const topicsSnap = await db.collection('Grades').doc('Grade_4')
+          .collection('Chapters').doc(chapterId).collection('Topics').get();
+        const topicIds = numericSort(topicsSnap.docs.map(d => d.id));
+
+        for (const topicId of topicIds) {
+          children.push(new Paragraph({
+            children: [new TextRun({ text: `Topic: ${displayName(topicId)}`, bold: true, size: 26, font: "Arial", color: "333333" })],
+            spacing: { before: 300, after: 160 },
+            indent: { left: 360 }
+          }));
+
+          const typesSnap = await db.collection('Grades').doc('Grade_4')
+            .collection('Chapters').doc(chapterId).collection('Topics').doc(topicId)
+            .collection('QuestionTypes').get();
+          const typeIds = numericSort(typesSnap.docs.map(d => d.id));
+
+          for (const typeId of typeIds) {
+            children.push(new Paragraph({
+              children: [new TextRun({ text: displayName(typeId), bold: true, size: 22, font: "Arial", italics: true, color: "555555" })],
+              spacing: { before: 240, after: 120 },
+              indent: { left: 720 }
+            }));
+
+            const questionsSnap = await db.collection('Grades').doc('Grade_4')
+              .collection('Chapters').doc(chapterId).collection('Topics').doc(topicId)
+              .collection('QuestionTypes').doc(typeId).collection('Questions').get();
+
+            let qNum = 1;
+            questionsSnap.forEach(doc => {
+              const d = doc.data();
+
+              children.push(new Paragraph({
+                children: [
+                  new TextRun({ text: `Q${qNum}: `, bold: true, size: 20, font: "Arial" }),
+                  new TextRun({ text: d.question || '', size: 20, font: "Arial" })
+                ],
+                spacing: { before: 160, after: 60 },
+                indent: { left: 1080 }
+              }));
+
+              children.push(new Paragraph({
+                children: [
+                  new TextRun({ text: 'ANS: ', bold: true, size: 20, font: "Arial", color: "0F9D95" }),
+                  new TextRun({ text: d.answer || '', bold: true, size: 20, font: "Arial", color: "0F9D95" })
+                ],
+                spacing: { before: 0, after: 60 },
+                indent: { left: 1080 }
+              }));
+
+              if (d.explanation) {
+                children.push(new Paragraph({
+                  children: [
+                    new TextRun({ text: 'Explanation: ', bold: true, size: 18, font: "Arial", color: "777777" }),
+                    new TextRun({ text: d.explanation, size: 18, font: "Arial", color: "777777" })
+                  ],
+                  spacing: { before: 0, after: 40 },
+                  indent: { left: 1080 }
+                }));
+              }
+
+              if (d.hint) {
+                children.push(new Paragraph({
+                  children: [
+                    new TextRun({ text: 'Hint: ', bold: true, size: 18, font: "Arial", color: "999999" }),
+                    new TextRun({ text: d.hint, size: 18, font: "Arial", color: "999999" })
+                  ],
+                  spacing: { before: 0, after: 40 },
+                  indent: { left: 1080 }
+                }));
+              }
+
+              children.push(new Paragraph({ children: [], spacing: { after: 80 } }));
+              qNum++;
+            });
+          }
+        }
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 12240, height: 15840 },
+              margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+            }
+          },
+          children
+        }]
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dont-be-late-grade4-${new Date().toISOString().slice(0,10)}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showNotification('✅ Downloaded! Open in Word or Google Docs.', 'success');
+
+    } catch (err) {
+      console.error('Export error', err);
+      showNotification('Export failed. Check console.', 'error');
+    } finally {
+      btn.textContent = '📄 Export to Doc';
+      btn.disabled = false;
+    }
   }
 }

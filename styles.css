@@ -442,3 +442,15 @@ form input:focus{
   .dropdown-selectors { flex-direction: column; }
   .dropdown { width: 100%; }
 }
+
+#exportDocBtn {
+  margin: 12px 4px 0 0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  background: #5b6abf;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+#exportDocBtn:hover { background: #4a58a8; }

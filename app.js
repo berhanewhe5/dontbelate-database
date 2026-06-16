@@ -1036,15 +1036,7 @@ async function exportAllToCSV() {
     btn.disabled = true;
 
     try {
-      if (!window.docx) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
+      if (!window.docx) throw new Error('docx library not loaded');
 
       const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle } = window.docx;
 

@@ -1028,7 +1028,7 @@ async function exportAllToCSV() {
     btn.textContent = '⬇ Export to CSV';
     btn.disabled = false;
   }
-
+}
   // ====== Export Grade 4 questions to .docx ======
   async function exportToDocx() {
     const btn = document.getElementById('exportDocBtn');
@@ -1175,5 +1175,4 @@ async function exportAllToCSV() {
       btn.textContent = '📄 Export to Doc';
       btn.disabled = false;
     }
-  }
 }
